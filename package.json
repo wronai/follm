@@ -1,5 +1,5 @@
 {
-  "name": "minimal-form-filler",
+  "name": "follm",
   "version": "1.0.0",
   "description": "Minimal form filler using Playwright and Mistral AI",
   "main": "app.js",

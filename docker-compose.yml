@@ -33,9 +33,9 @@ services:
     stop_grace_period: 1m
     restart: unless-stopped
     environment:
-      TZ: ${TZ:-UTC}
-      LANG: en_US.UTF-8
-      LC_ALL: en_US.UTF-8
+      TZ: ${TZ}
+      LANG: ${LANG}
+      LC_ALL: ${LC_ALL}
 
   form-filler:
     build:
@@ -43,24 +43,27 @@ services:
       dockerfile: Dockerfile.minimal
     container_name: form-filler
     ports:
-      - "3001:3000"
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
     depends_on:
       ollama:
         condition: service_healthy
     environment:
       - OLLAMA_HOST=http://ollama:11434
-      - NODE_ENV=development
-      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright/
-      - TZ=${TZ:-UTC}
-      - LANG=en_US.UTF-8
-      - LC_ALL=en_US.UTF-8
+      - NODE_ENV=${NODE_ENV}
+      - PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH}
+      - TZ=${TZ}
+      - LANG=${LANG}
+      - LC_ALL=${LC_ALL}
+      - DEBUG=${DEBUG}
     volumes:
       - ./uploads:/app/uploads
       - /tmp/playwright:/tmp/playwright
     networks:
       - follm-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').request('http://localhost:3000/health', {timeout: 5000}, (res) => {if (res.statusCode === 200) process.exit(0); else process.exit(1);}).on('error', () => process.exit(1)).end()"]
+      test: ["CMD", "node", "-e", "require('http').request('http://localhost:${PORT}/health', {timeout: 5000}, (res) => {if (res.statusCode === 200) process.exit(0); else process.exit(1);}).on('error', () => process.exit(1)).end()"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -68,17 +71,16 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 2G
+          cpus: '${CONTAINER_CPUS}'
+          memory: ${CONTAINER_MEMORY}
     stop_grace_period: 1m
     restart: unless-stopped
 
 networks:
   follm-network:
     driver: bridge
-    driver_opts:
-      encrypted: ''
 
 volumes:
   ollama_data:
     driver: local
+  uploads:

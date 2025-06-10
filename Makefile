@@ -1,7 +1,7 @@
 .PHONY: build up down test clean help local-up local-down local-logs local-shell
 
 # Configuration
-PORT ?= 3001
+PORT ?= 3002
 COMPOSE := docker-compose -f docker-compose.yml
 COMPOSE_LOCAL := docker-compose -f docker-compose.local.yml
 

@@ -7,16 +7,17 @@ services:
       dockerfile: Dockerfile.minimal
     container_name: form-filler-local
     ports:
-      - "${PORT:-3001}:3001"  # Map host port to container port 3001
+      - "${PORT}:${PORT}"  # Map host port to container port
+    env_file:
+      - .env
     environment:
-      - OLLAMA_HOST=host.docker.internal:11434
-      - NODE_ENV=development
-      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright/
-      - TZ=${TZ:-UTC}
-      - LANG=en_US.UTF-8
-      - LC_ALL=en_US.UTF-8
-      # Enable debug logging in development
-      - DEBUG=app:*,playwright:*,form-filler:*
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - NODE_ENV=${NODE_ENV}
+      - PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH}
+      - TZ=${TZ}
+      - LANG=${LANG}
+      - LC_ALL=${LC_ALL}
+      - DEBUG=${DEBUG}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -25,7 +26,7 @@ services:
       - /app/uploads
       - /tmp/playwright:/tmp/playwright
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').request('http://localhost:3000/health', {timeout: 5000}, (res) => {if (res.statusCode === 200) process.exit(0); else process.exit(1);}).on('error', () => process.exit(1)).end()"]
+      test: ["CMD", "node", "-e", "require('http').request('http://localhost:${PORT}/health', {timeout: 5000}, (res) => {if (res.statusCode === 200) process.exit(0); else process.exit(1);}).on('error', () => process.exit(1)).end()"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -33,8 +34,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 2G
+          cpus: '${CONTAINER_CPUS}'
+          memory: ${CONTAINER_MEMORY}
     stop_grace_period: 1m
     restart: unless-stopped
     # Enable hot-reload in development

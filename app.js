@@ -135,7 +135,22 @@ app.get('/test', (req, res) => {
   `);
 });
 
-app.listen(3000, () => {
-  console.log('Minimal Form Filler running on port 3000');
-  console.log('Test form: http://localhost:3000/test');
+// Start the server
+const server = app.listen(port, '0.0.0.0', () => {
+  const host = server.address().address;
+  const port = server.address().port;
+  console.log(`Minimal Form Filler running at http://${host}:${port}`);
+  console.log(`Test form: http://localhost:${port}/test`);
+  console.log('Press CTRL+C to stop the server');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
