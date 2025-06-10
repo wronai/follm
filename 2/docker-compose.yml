@@ -4,7 +4,7 @@ services:
   form-automation:
     build: .
     ports:
-      - "3000:3000"
+      - "3008:3000"
     environment:
       - REDIS_URL=redis://redis:6379
       - OLLAMA_URL=http://ollama:11434
@@ -15,18 +15,18 @@ services:
       - ./uploads:/app/uploads
       - ./screenshots:/app/screenshots
 
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    command: >
-      sh -c "ollama serve & 
-             sleep 10 && 
-             ollama pull mistral:7b && 
-             ollama pull llava:7b &&
-             wait"
+#  ollama:
+#    image: ollama/ollama:latest
+#    ports:
+#      - "11434:11434"
+#    volumes:
+#      - ollama_data:/root/.ollama
+#    command: >
+#      sh -c "ollama serve &
+#             sleep 10 &&
+#             ollama pull mistral:7b &&
+#             ollama pull llava:7b &&
+#             wait"
 
   redis:
     image: redis:7-alpine
@@ -40,7 +40,7 @@ services:
       context: .
       dockerfile: Dockerfile.playwright
     ports:
-      - "8080:8080"
+      - "8088:8080"
     environment:
       - BROWSER_POOL_SIZE=5
     volumes:

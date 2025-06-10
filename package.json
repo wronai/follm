@@ -1,20 +1,21 @@
 {
   "name": "follm",
   "version": "1.0.0",
-  "description": "AI-powered form filler using Playwright and LLMs",
+  "description": "AI-powered form filler using Playwright - Automate form filling with ease",
   "main": "app.js",
   "bin": {
     "follm": "./app.js"
   },
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "prepare": "playwright install"
+    "start": "node app.js serve",
+    "dev": "nodemon app.js serve",
+    "test": "node test/simple.test.js",
+    "docker:build": "docker build -t follm .",
+    "docker:run": "docker run -p 3000:3000 -v $(pwd):/app follm serve",
+    "prepare": "playwright install --with-deps chromium",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "prepublishOnly": "npm run lint && npm test"
   },
   "dependencies": {
     "axios": "^1.6.2",
@@ -27,7 +28,13 @@
     "playwright": "^1.40.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "@playwright/test": "^1.52.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "node-fetch": "^3.3.2",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.1.1"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -37,11 +44,11 @@
     "form-filler",
     "ai",
     "automation",
-    "web-scraping",
-    "llm",
-    "web-automation"
+    "web-automation",
+    "cli",
+    "web-forms"
   ],
-  "author": "",
+  "author": "WRONAI Team",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: form-automation
+data:
+  init.sql: |
+    -- Create necessary extensions
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    
+    -- Create tables
+    CREATE TABLE IF NOT EXISTS form_submissions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        form_data JSONB NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Create indexes
+    CREATE INDEX IF NOT EXISTS idx_form_submissions_status ON form_submissions(status);
+    CREATE INDEX IF NOT EXISTS idx_form_submissions_created_at ON form_submissions(created_at);
+    
+    -- Grant permissions
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO formuser;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO formuser;

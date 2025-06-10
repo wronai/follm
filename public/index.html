@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOLLM - AI-Powered Form Filler</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .form-field {
+            transition: all 0.3s ease;
+        }
+        .form-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">FOLLM</h1>
+            <p class="text-gray-600">AI-Powered Form Filler</p>
+        </header>
+
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Fill a Form</h2>
+                
+                <form id="fillForm" class="space-y-6">
+                    <div>
+                        <label for="url" class="block text-sm font-medium text-gray-700 mb-1">Form URL</label>
+                        <input type="url" id="url" name="url" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md form-field focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="https://example.com/form">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Form Data (JSON)</label>
+                        <textarea id="formData" name="formData" rows="6"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md form-field focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder='{"firstname": "John", "lastname": "Doe", "email": "john@example.com"}'>
+                        </textarea>
+                        <p class="mt-1 text-sm text-gray-500">Enter form field names and values as JSON</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">File Upload (Optional)</label>
+                        <div class="mt-1 flex items-center">
+                            <input type="file" id="file" name="file"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" id="submitForm" name="submitForm" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="submitForm" class="ml-2 block text-sm text-gray-700">Submit form after filling</label>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit"
+                            class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            Fill Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="result" class="mt-8 max-w-2xl mx-auto hidden">
+            <h3 class="text-lg font-medium text-gray-800 mb-4">Form Filled Successfully!</h3>
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <img id="screenshot" src="" alt="Form screenshot" class="w-full">
+                <div class="p-4">
+                    <button id="downloadBtn" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                        Download Screenshot
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('fillForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            const submitButton = form.querySelector('button[type="submit"]');
+            const resultDiv = document.getElementById('result');
+            
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Filling...';
+            
+            try {
+                const response = await fetch('/api/fill', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Show result
+                    document.getElementById('screenshot').src = data.screenshot + '?' + new Date().getTime();
+                    resultDiv.classList.remove('hidden');
+                    resultDiv.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert(`Error: ${data.error || 'Failed to fill form'}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please check the console for details.');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Fill Form';
+            }
+        });
+        
+        // Download screenshot
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = document.getElementById('screenshot').src;
+            link.download = 'form-filled-' + new Date().toISOString().slice(0, 10) + '.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    </script>
+</body>
+</html>

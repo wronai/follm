@@ -1,0 +1,35 @@
+{
+  "defaults": {
+    "timeout": 30000,
+    "headless": true,
+    "screenshot": true,
+    "submitForm": false
+  },
+  "forms": {
+    "contact": {
+      "url": "https://example.com/contact",
+      "fields": {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "message": "Hello, I'm interested in your services!"
+      },
+      "submit": true
+    },
+    "job_application": {
+      "url": "https://example.com/careers/apply",
+      "fields": {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@example.com",
+        "phone": "+1234567890",
+        "position": "Senior Developer",
+        "experience": "5+ years"
+      },
+      "files": {
+        "resume": "./resume.pdf",
+        "cover_letter": "./cover-letter.pdf"
+      },
+      "submit": true
+    }
+  }
+}

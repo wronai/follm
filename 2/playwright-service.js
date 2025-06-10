@@ -562,7 +562,7 @@ class PlaywrightService {
   }
 
   start() {
-    const PORT = process.env.PORT || 8080;
+    const PORT = process.env.PORT || 8088;
 
     this.app.listen(PORT, () => {
       console.log(`🎭 Playwright Service running on port ${PORT}`);
