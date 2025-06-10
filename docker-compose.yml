@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - follm-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      sh -c "ollama serve &
+             sleep 10 &&
+             echo 'Pulling Mistral 7B model...' &&
+             ollama pull mistral:7b &&
+             echo 'Pulling LLaVA model...' &&
+             ollama pull llava:7b &&
+             echo 'Models loaded successfully' &&
+             tail -f /dev/null"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 8G
+    stop_grace_period: 1m
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-UTC}
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+
+  form-filler:
+    build:
+      context: .
+      dockerfile: Dockerfile.minimal
+    container_name: form-filler
+    ports:
+      - "3001:3000"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - NODE_ENV=development
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright/
+      - TZ=${TZ:-UTC}
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+    volumes:
+      - ./uploads:/app/uploads
+      - /tmp/playwright:/tmp/playwright
+    networks:
+      - follm-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').request('http://localhost:3000/health', {timeout: 5000}, (res) => {if (res.statusCode === 200) process.exit(0); else process.exit(1);}).on('error', () => process.exit(1)).end()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+    stop_grace_period: 1m
+    restart: unless-stopped
+
+networks:
+  follm-network:
+    driver: bridge
+    driver_opts:
+      encrypted: ''
+
+volumes:
+  ollama_data:
+    driver: local

@@ -1,4 +1,5 @@
 // app.js - Minimalne rozwiązanie
+require('dotenv').config();
 const express = require('express');
 const playwright = require('playwright');
 const axios = require('axios');
@@ -6,7 +7,22 @@ const multer = require('multer');
 const path = require('path');
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+const port = process.env.PORT || 3001;  // Default port updated to 3001
+
+// Configure multer for file uploads
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Mistral API via Ollama
 async function generateFormCode(formHtml, userData) {
@@ -17,7 +33,8 @@ User Data: ${JSON.stringify(userData)}
 Generate only the filling code:`;
 
   try {
-    const response = await axios.post('http://localhost:11434/api/generate', {
+    const ollamaHost = process.env.OLLAMA_HOST || 'http://localhost:11434';
+    const response = await axios.post(`${ollamaHost}/api/generate`, {
       model: 'mistral:7b',
       prompt: prompt,
       stream: false
