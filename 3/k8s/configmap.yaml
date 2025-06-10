@@ -1,0 +1,17 @@
+# k8s/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: form-automation-config
+  namespace: form-automation
+data:
+  NODE_ENV: "production"
+  REDIS_URL: "redis://redis-service:6379"
+  POSTGRES_URL: "postgresql://formuser:formpass@postgres-service:5432/formdb"
+  OLLAMA_URL: "http://ollama-service:11434"
+  MINIO_URL: "http://minio-service:9000"
+  BROWSER_POOL_SIZE: "10"
+  MAX_CONCURRENT_SESSIONS: "50"
+  AI_MODEL_PRIMARY: "mistral:7b"
+  AI_MODEL_VISION: "llava:7b"
+  LOG_LEVEL: "info"

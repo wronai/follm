@@ -1,0 +1,68 @@
+# k8s/form-automation.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: form-automation
+  namespace: form-automation
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: form-automation
+  template:
+    metadata:
+      labels:
+        app: form-automation
+    spec:
+      containers:
+      - name: form-automation
+        image: form-automation:enterprise
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: form-automation-config
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: uploads
+          mountPath: /app/uploads
+        - name: screenshots
+          mountPath: /app/screenshots
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: uploads-pvc
+      - name: screenshots
+        persistentVolumeClaim:
+          claimName: screenshots-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: form-automation-service
+  namespace: form-automation
+spec:
+  selector:
+    app: form-automation
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: LoadBalancer
