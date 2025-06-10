@@ -1,54 +1,124 @@
-# AI Form Filler with Playwright and Mistral
+# FOLLM - AI-Powered Form Filler
 
-A minimal form filling automation solution using Playwright for browser automation and Mistral (via Ollama) for AI-powered form interaction.
+A powerful form filling automation tool that combines Playwright for browser automation with AI assistance. Fill out web forms automatically with ease, either through a simple CLI or a user-friendly web interface.
 
-## Features
+## ✨ Features
 
-- 🚀 Automated form filling with AI assistance
-- 📄 File upload support
-- 🐳 Docker containerization
-- 🤖 Local or containerized Ollama deployment options
-- 🔄 Health checks and monitoring endpoints
+- 🖥️ **Command Line Interface** - Fill forms directly from your terminal
+- 🌐 **Web Interface** - User-friendly web UI for form filling
+- 🤖 **AI-Powered** - Smart form field detection and filling
+- 📄 **File Uploads** - Support for file upload fields
+- 📸 **Screenshots** - Automatic screenshots before and after filling
+- 🍪 **Cookie Handling** - Automatic cookie consent management
+- 🐳 **Docker Support** - Easy containerized deployment
 
-## Prerequisites
+## 🚀 Installation
 
-- Docker and Docker Compose
-- Node.js 18+ (for local development)
-- Ollama (if using local instance)
+### Prerequisites
 
-## 🚀 Quick Start
+- Node.js 18 or later
+- npm or yarn
+- Playwright browsers (installed automatically)
 
-### Option 1: Containerized Deployment (Recommended)
-
-This option runs everything in Docker containers, including Ollama.
+### Install as a global CLI tool
 
 ```bash
-# Build and start all services
-make build
-make up
-
-# View logs
-make logs
-
-# Run a test form fill
-make test
-
-# Stop services
-make down
+npm install -g follm
 ```
 
-### Option 2: Local Development with Local Ollama
-
-For development with a local Ollama instance (faster iterations):
+### Or use with npx
 
 ```bash
-# In terminal 1: Start Ollama
-ollama serve
+npx follm <command>
+```
 
-# In terminal 2: Start the application
-make local-up
+## 💻 CLI Usage
 
-# View application logs
+### Fill a form
+
+```bash
+follm fill https://example.com/form
+```
+
+### Fill a form with data
+
+```bash
+follm fill https://example.com/form --data '{"name":"John","email":"john@example.com"}'
+```
+
+### Upload a file
+
+```bash
+follm fill https://example.com/upload --file ./resume.pdf
+```
+
+### Submit the form after filling
+
+```bash
+follm fill https://example.com/form --data '{"name":"John"}' --submit
+```
+
+### Show the browser window
+
+```bash
+follm fill https://example.com/form --show-browser
+```
+
+### Keep the browser open after completion
+
+```bash
+follm fill https://example.com/form --keep-open
+```
+
+## 🌐 Web Interface
+
+Start the web server:
+
+```bash
+follm serve
+```
+
+Then open `http://localhost:3000` in your browser.
+
+### Web Interface Features
+
+- Simple form to enter URL and form data
+- File upload support
+- Screenshot preview
+- Download filled form screenshots
+- Responsive design
+
+## 🐳 Docker Support
+
+### Build the Docker image
+
+```bash
+docker build -t follm .
+```
+
+### Run the container
+
+```bash
+docker run -p 3000:3000 -v $(pwd):/app follm serve
+```
+
+## 📝 Example
+
+Fill out a contact form:
+
+```bash
+follm fill https://example.com/contact \
+  --data '{"name":"John Doe","email":"john@example.com","message":"Hello!"}' \
+  --submit
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+MIT
 make local-logs
 
 # Access the application

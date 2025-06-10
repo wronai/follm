@@ -1,156 +1,207 @@
-// app.js - Minimalne rozwiązanie
-require('dotenv').config();
-const express = require('express');
-const playwright = require('playwright');
-const axios = require('axios');
-const multer = require('multer');
+#!/usr/bin/env node
+
+const { Command } = require('commander');
+const chalk = require('chalk');
+const inquirer = require('inquirer');
 const path = require('path');
+const fs = require('fs');
+const { chromium } = require('playwright');
+require('dotenv').config();
 
-const app = express();
-const port = process.env.PORT || 3001;  // Default port updated to 3001
+const program = new Command();
 
-// Configure multer for file uploads
-const upload = multer({ 
-  dest: 'uploads/',
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-});
+// Package version
+const { version } = require('./package.json');
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Mistral API via Ollama
-async function generateFormCode(formHtml, userData) {
-  const prompt = `Analyze this form and generate Playwright code to fill it:
-HTML: ${formHtml}
-User Data: ${JSON.stringify(userData)}
-
-Generate only the filling code:`;
-
+// Main function to fill a form
+async function fillForm(url, options = {}) {
+  console.log(chalk.blue(`\n🚀 Starting form filler for: ${url}`));
+  
+  const userData = options.data ? JSON.parse(options.data) : {};
+  const headless = !options.showBrowser;
+  const timeout = options.timeout ? parseInt(options.timeout) : 30000;
+  
+  const browser = await chromium.launch({ 
+    headless,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage'
+    ]
+  });
+  
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 1024 },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    acceptDownloads: true
+  });
+  
+  const page = await context.newPage();
+  
   try {
-    const ollamaHost = process.env.OLLAMA_HOST || 'http://localhost:11434';
-    const response = await axios.post(`${ollamaHost}/api/generate`, {
-      model: 'mistral:7b',
-      prompt: prompt,
-      stream: false
+    console.log(chalk.blue('🌐 Navigating to the page...'));
+    await page.goto(url, { 
+      waitUntil: 'domcontentloaded',
+      timeout
     });
-
-    return response.data.response;
-  } catch (error) {
-    console.error('Mistral API error:', error);
-    return null;
-  }
-}
-
-// Główna funkcja wypełniania formularza
-async function fillForm(url, userData, filePath) {
-  const browser = await playwright.chromium.launch({ headless: false });
-  const page = await browser.newPage();
-
-  try {
-    await page.goto(url);
-
-    // Pobierz struktura formularza
-    const formHtml = await page.evaluate(() => {
-      const forms = document.querySelectorAll('form');
-      return forms.length > 0 ? forms[0].outerHTML : '';
-    });
-
-    // Generuj kod wypełniania
-    const fillCode = await generateFormCode(formHtml, userData);
-
-    if (fillCode) {
-      // Wykonaj wygenerowany kod (uproszczone)
-      await executeGeneratedCode(page, fillCode, userData, filePath);
+    
+    console.log(chalk.green(`✅ Loaded page: ${await page.title()}`));
+    
+    // Handle cookies if needed
+    try {
+      const cookieButton = await page.$('button:has-text("Accept All"), button:has-text("Alle akzeptieren"), button:has-text("Accept")');
+      if (cookieButton) {
+        console.log(chalk.blue('🍪 Accepting cookies...'));
+        await cookieButton.click();
+        await page.waitForTimeout(2000);
+      }
+    } catch (e) {
+      console.log(chalk.yellow('ℹ️ No cookie banner found or could not click accept'));
+    }
+    
+    // Take a screenshot
+    const screenshotPath = path.join(process.cwd(), 'form-screenshot.png');
+    await page.screenshot({ path: screenshotPath });
+    console.log(chalk.green(`📸 Screenshot saved to: ${screenshotPath}`));
+    
+    // Get form data interactively if not provided
+    if (Object.keys(userData).length === 0) {
+      console.log(chalk.blue('\n🔍 No form data provided. Please fill in the form fields:'));
+      
+      // Get all form inputs
+      const inputs = await page.$$('input, textarea, select');
+      
+      for (const input of inputs) {
+        const inputId = await input.getAttribute('id') || await input.getAttribute('name') || 'field';
+        const inputType = await input.getAttribute('type') || 'text';
+        const isRequired = await input.getAttribute('required') !== null;
+        
+        // Skip hidden inputs
+        if (inputType === 'hidden') continue;
+        
+        // Skip file inputs for now
+        if (inputType === 'file') {
+          console.log(chalk.yellow(`ℹ️ File upload field detected: ${inputId}`));
+          continue;
+        }
+        
+        const answer = await inquirer.prompt([{
+          type: 'input',
+          name: 'value',
+          message: `Enter value for ${inputId}${isRequired ? ' (required)' : ''}:`,
+          validate: input => isRequired ? input.length > 0 || 'This field is required' : true
+        }]);
+        
+        if (answer.value) {
+          await input.fill(answer.value);
+          userData[inputId] = answer.value;
+        }
+      }
     } else {
-      // Fallback - proste wypełnianie
-      await simpleFillForm(page, userData, filePath);
+      // Fill form with provided data
+      console.log(chalk.blue('\n📝 Filling form with provided data...'));
+      
+      for (const [key, value] of Object.entries(userData)) {
+        try {
+          await page.fill(`[name="${key}"], #${key}`, value);
+          console.log(chalk.green(`✓ Filled ${key}`));
+        } catch (e) {
+          console.log(chalk.yellow(`⚠️ Could not fill field ${key}`));
+        }
+      }
     }
-
-    await page.screenshot({ path: 'result.png' });
-    return { success: true, screenshot: 'result.png' };
-
-  } catch (error) {
-    console.error('Form filling error:', error);
-    return { success: false, error: error.message };
-  } finally {
-    await browser.close();
-  }
-}
-
-// Fallback - proste wypełnianie bez AI
-async function simpleFillForm(page, userData, filePath) {
-  // Wypełnij pola tekstowe
-  for (const [key, value] of Object.entries(userData)) {
-    const selectors = [
-      `input[name="${key}"]`,
-      `input[id="${key}"]`,
-      `input[placeholder*="${key}"]`,
-      `textarea[name="${key}"]`
-    ];
-
-    for (const selector of selectors) {
+    
+    // Handle file upload if specified
+    if (options.file) {
       try {
-        await page.fill(selector, value, { timeout: 1000 });
-        break;
-      } catch (e) { continue; }
+        const filePath = path.resolve(process.cwd(), options.file);
+        if (fs.existsSync(filePath)) {
+          const fileInput = await page.$('input[type="file"]');
+          if (fileInput) {
+            await fileInput.setInputFiles(filePath);
+            console.log(chalk.green(`📎 Uploaded file: ${filePath}`));
+          } else {
+            console.log(chalk.yellow('⚠️ No file input found on the page'));
+          }
+        } else {
+          console.log(chalk.red(`❌ File not found: ${filePath}`));
+        }
+      } catch (e) {
+        console.log(chalk.red(`❌ Error uploading file: ${e.message}`));
+      }
     }
-  }
-
-  // Upload pliku
-  if (filePath) {
-    const fileInput = await page.locator('input[type="file"]').first();
-    if (await fileInput.count() > 0) {
-      await fileInput.setInputFiles(filePath);
+    
+    // Take final screenshot
+    const filledScreenshotPath = path.join(process.cwd(), 'form-filled.png');
+    await page.screenshot({ path: filledScreenshotPath });
+    console.log(chalk.green(`📸 Filled form screenshot saved to: ${filledScreenshotPath}`));
+    
+    // Submit form if requested
+    if (options.submit) {
+      console.log(chalk.blue('\n🚀 Submitting form...'));
+      try {
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'networkidle', timeout }),
+          page.click('button[type="submit"], input[type="submit"], [type="submit"]')
+        ]);
+        console.log(chalk.green('✅ Form submitted successfully!'));
+      } catch (e) {
+        console.log(chalk.yellow('⚠️ Could not submit form automatically'));
+      }
+    }
+    
+  } catch (error) {
+    console.error(chalk.red(`❌ Error: ${error.message}`));
+    
+    // Save error screenshot
+    const errorPath = path.join(process.cwd(), 'error.png');
+    await page.screenshot({ path: errorPath });
+    console.log(chalk.red(`📸 Error screenshot saved to: ${errorPath}`));
+    
+    process.exit(1);
+  } finally {
+    if (!options.keepOpen) {
+      await browser.close();
+      console.log(chalk.blue('\n👋 Browser closed. Have a great day!\n'));
+    } else {
+      console.log(chalk.blue('\n🛑 Browser kept open as requested. Press Ctrl+C to exit.\n'));
     }
   }
 }
 
-// API endpoint
-app.post('/fill-form', upload.single('file'), async (req, res) => {
-  const { url, ...userData } = req.body;
-  const filePath = req.file ? req.file.path : null;
+// Set up CLI commands
+program
+  .name('follm')
+  .description('AI-powered form filler using Playwright')
+  .version(version, '-v, --version', 'output the current version')
+  .option('-d, --debug', 'output extra debugging')
+  .option('-t, --timeout <ms>', 'navigation timeout in milliseconds', '30000');
 
-  const result = await fillForm(url, userData, filePath);
-  res.json(result);
-});
+program
+  .command('fill <url>')
+  .description('Fill a form on the specified URL')
+  .option('-d, --data <json>', 'form data as JSON string')
+  .option('-f, --file <path>', 'path to file to upload')
+  .option('-s, --submit', 'submit the form after filling')
+  .option('--show-browser', 'show the browser window', false)
+  .option('--keep-open', 'keep the browser open after completion', false)
+  .action(async (url, options) => {
+    try {
+      await fillForm(url, {
+        ...options,
+        timeout: program.opts().timeout,
+        debug: program.opts().debug
+      });
+    } catch (error) {
+      console.error(chalk.red(`❌ Error: ${error.message}`));
+      process.exit(1);
+    }
+  });
 
-// Test form
-app.get('/test', (req, res) => {
-  res.send(`
-    <form method="post" enctype="multipart/form-data">
-      <input name="firstName" placeholder="First Name" required>
-      <input name="lastName" placeholder="Last Name" required>
-      <input name="email" type="email" placeholder="Email" required>
-      <input name="phone" placeholder="Phone">
-      <textarea name="message" placeholder="Message"></textarea>
-      <input type="file" name="cv" accept=".pdf,.doc,.docx">
-      <button type="submit">Submit</button>
-    </form>
-  `);
-});
+// Show help if no arguments
+if (process.argv.length <= 2) {
+  program.help();
+}
 
-// Start the server
-const server = app.listen(port, '0.0.0.0', () => {
-  const host = server.address().address;
-  const port = server.address().port;
-  console.log(`Minimal Form Filler running at http://${host}:${port}`);
-  console.log(`Test form: http://localhost:${port}/test`);
-  console.log('Press CTRL+C to stop the server');
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  process.exit(1);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
+// Parse arguments
+program.parse(process.argv);
