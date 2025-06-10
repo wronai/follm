@@ -2,7 +2,8 @@
 node_modules/
 .pnp
 .pnp.js
-
+in
+package-lock.json
 # Testing
 coverage/
 .nyc_output/
@@ -231,3 +232,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# OCR Output Files
+ocr-output/
+extracted-data.json

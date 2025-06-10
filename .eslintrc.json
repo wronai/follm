@@ -1,0 +1,23 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true,
+    "browser": true
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-console": "off",
+    "no-undef": "warn"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "public/",
+    "test/",
+    "**/*.test.js"
+  ]
+}

@@ -17,6 +17,8 @@ spec:
       containers:
       - name: form-automation
         image: form-automation:enterprise
+        imagePullPolicy: Never  # Use local image only
+        command: ["node", "main-enterprise.js"]
         ports:
         - containerPort: 3000
         envFrom:
